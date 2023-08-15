@@ -1,24 +1,24 @@
 package com.bezkoder.springjwt.controllers;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import javax.validation.Valid;
 
+import com.bezkoder.springjwt.Services.IUser;
+import com.bezkoder.springjwt.Services.UserService;
+import com.bezkoder.springjwt.models.Bus;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.bezkoder.springjwt.models.ERole;
 import com.bezkoder.springjwt.models.Role;
@@ -37,6 +37,8 @@ import com.bezkoder.springjwt.security.services.UserDetailsImpl;
 @RequestMapping("/api/auth")
 public class AuthController {
   @Autowired
+  private IUser iuser;
+  @Autowired
   AuthenticationManager authenticationManager;
 
   @Autowired
@@ -47,6 +49,9 @@ public class AuthController {
 
   @Autowired
   PasswordEncoder encoder;
+  @Autowired
+
+  private UserService service;
 
   @Autowired
   JwtUtils jwtUtils;
@@ -126,4 +131,100 @@ public class AuthController {
 
     return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
   }
+  @PostMapping("/signout")
+  public ResponseEntity<?> logoutUser() {
+    ResponseCookie cookie = jwtUtils.getCleanJwtCookie();
+    return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString())
+            .body(new MessageResponse("You've been signed out!"));
+  }
+  @PostMapping("/add")
+  public ResponseEntity<?> addUser(@Valid @RequestBody SignupRequest signUpRequest) {
+    if (userRepository.existsByUsername(signUpRequest.getUsername())) {
+      return ResponseEntity.badRequest().body(new MessageResponse("Error: Username is already taken!"));
+    }
+
+    if (userRepository.existsByEmail(signUpRequest.getEmail())) {
+      return ResponseEntity.badRequest().body(new MessageResponse("Error: Email is already in use!"));
+    }
+
+    Set<String> strRoles = signUpRequest.getRole();
+    Set<Role> roles = new HashSet<>();
+
+    if (strRoles == null) {
+      Role userRole = roleRepository.findByName(ERole.ROLE_USER)
+              .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+      roles.add(userRole);
+    } else {
+      strRoles.forEach(role -> {
+        switch (role) {
+          case "admin":
+            Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
+                    .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+            roles.add(adminRole);
+            break;
+          case "mod":
+            Role modRole = roleRepository.findByName(ERole.ROLE_MODERATOR)
+                    .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+            roles.add(modRole);
+            break;
+
+
+          default:
+            Role userRole = roleRepository.findByName(ERole.ROLE_USER)
+                    .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+            roles.add(userRole);
+        }
+      });
+    }
+
+    User user = new User(signUpRequest.getUsername(),
+            signUpRequest.getEmail(),
+            encoder.encode(signUpRequest.getPassword()));
+
+
+    User newUser = service.addUser(user, roles);
+
+
+
+    return ResponseEntity.ok(new MessageResponse("User added successfully!"));
+  }
+  @PutMapping("/update/{id}")
+  public User updateUser(@PathVariable("id") Long id, @RequestBody User b)  {
+    return iuser.updateUser(id,b);
+  }
+  @GetMapping("getUserById/{id}")
+  public User retrieveUserById(@PathVariable("id") Long id){
+    return iuser.retrieveUserById(id);
+  }
+  //@PreAuthorize("hasAuthority('ROLE_USER') and isAuthenticated() and principal.isEnabled()")
+  @GetMapping("/getAllUser")
+  public List<User> retrieveAllUser(){
+    return iuser.retrieveAllUser();
+  }
+  @DeleteMapping("deleteUser/{id}")
+  public void deleteUser(@PathVariable("id") Long id){
+    iuser.deleteUser(id);
+  }
+  @GetMapping("/users/search")
+  public List<User> searchUsersByUsername(@RequestParam("username") String username) {
+    return iuser.searchUsersByUsername(username);
+  }
+  @PutMapping("/{userId}/role/{roleName}")
+  public ResponseEntity<Map<String, String>> updateUserRole(@PathVariable Long userId, @PathVariable String roleName) {
+    try {
+      service.updateUserRole(userId, roleName);
+      Map<String, String> response = new HashMap<>();
+      response.put("message", "User role updated successfully.");
+      return ResponseEntity.ok(response);
+    } catch (IllegalArgumentException e) {
+      Map<String, String> response = new HashMap<>();
+      response.put("error", e.getMessage());
+      return ResponseEntity.badRequest().body(response);
+    } catch (Exception e) {
+      Map<String, String> response = new HashMap<>();
+      response.put("error", "Failed to update user role.");
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+    }
+  }
+
 }

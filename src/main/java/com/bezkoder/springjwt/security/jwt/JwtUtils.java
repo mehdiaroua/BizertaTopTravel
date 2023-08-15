@@ -5,6 +5,7 @@ import java.util.Date;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
@@ -20,6 +21,8 @@ public class JwtUtils {
 
   @Value("${bezkoder.app.jwtExpirationMs}")
   private int jwtExpirationMs;
+  @Value("${jwtCookieName}")
+  private String jwtCookie;
 
   public String generateJwtToken(Authentication authentication) {
 
@@ -31,6 +34,10 @@ public class JwtUtils {
         .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
         .signWith(SignatureAlgorithm.HS512, jwtSecret)
         .compact();
+  }
+  public ResponseCookie getCleanJwtCookie() {
+    ResponseCookie cookie = ResponseCookie.from(jwtCookie, null).path("/api").build();
+    return cookie;
   }
 
   public String getUserNameFromJwtToken(String token) {
