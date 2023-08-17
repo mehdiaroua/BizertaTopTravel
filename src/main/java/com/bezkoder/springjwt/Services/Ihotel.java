@@ -1,6 +1,7 @@
 package com.bezkoder.springjwt.Services;
 
 import com.bezkoder.springjwt.models.Hotel;
+import com.bezkoder.springjwt.models.User;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -13,4 +14,5 @@ public interface Ihotel {
     public Hotel updateHotelAndImage(long id, String nom, String description, String pays,double prix,  MultipartFile image) throws IOException;
     Hotel retrieveHotelById(Long id);
     void deleteHotel(Hotel h) throws AccessDeniedException;
+
 }

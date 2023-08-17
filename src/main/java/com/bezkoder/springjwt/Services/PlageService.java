@@ -86,4 +86,7 @@ public class PlageService implements IPlage{
 
 
     }
+    public List<Plage> searchPlagesByNomPays(String pays, String nom) {
+        return plagerepo.findByPaysContainingIgnoreCaseAndNomContainingIgnoreCase(pays, nom);
+    }
 }

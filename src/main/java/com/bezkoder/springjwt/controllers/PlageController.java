@@ -2,6 +2,7 @@ package com.bezkoder.springjwt.controllers;
 
 import com.bezkoder.springjwt.Services.IPlage;
 import com.bezkoder.springjwt.Services.Ihotel;
+import com.bezkoder.springjwt.Services.PlageService;
 import com.bezkoder.springjwt.models.Hotel;
 import com.bezkoder.springjwt.models.Plage;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,13 +13,15 @@ import java.io.IOException;
 import java.nio.file.AccessDeniedException;
 import java.util.List;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
+@CrossOrigin(origins = "http://localhost:4200", maxAge = 3600, allowCredentials="true")
 @RestController
 @RequestMapping("/api/test")
 public class PlageController {
 
     @Autowired
     IPlage iplage;
+    @Autowired
+    PlageService plageService;
     @GetMapping("getPlageById/{id}")
     public Plage retrievePlageById(@PathVariable("id") Long id){
         return iplage.retrievePlageById(id);
@@ -42,5 +45,12 @@ public class PlageController {
     public Plage updatePlageAndImage(@RequestParam("id")long id,@RequestParam("nom")String nom, @RequestParam("description") String description,@RequestParam("pays") String pays,@RequestParam("prix")double prix,@RequestParam("image") MultipartFile image) throws IOException
     {
         return iplage.updatePlageAndImage(id,nom,  description,  pays,prix,image);
+    }
+    @GetMapping("/searchPlages")
+    public List<Plage> searchPlagessByNomPays(
+            @RequestParam(name = "pays") String pays,
+            @RequestParam(name = "nom") String nom) {
+
+        return plageService.searchPlagesByNomPays(pays, nom);
     }
 }

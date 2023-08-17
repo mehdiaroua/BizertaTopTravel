@@ -89,4 +89,10 @@ public class HotelService implements Ihotel{
     public void deleteHotel(Hotel h) throws AccessDeniedException {
         hotelrepo.delete(h);
     }
+
+    public List<Hotel> searchHotelsByNomPays(String pays, String nom) {
+        return hotelrepo.findByPaysContainingIgnoreCaseAndNomContainingIgnoreCase(pays, nom);
+    }
+
+
 }
